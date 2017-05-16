@@ -119,13 +119,60 @@ int main() {
 		
 	while(1){	
 
+	enum mode{DIM_LUXE,DIM_CWWW,DIM_CW,DIM_WW,DIM_R,DIM_Y} mode;
+
  	static int i=0;
 		// PWM max = 2047, ADC max = 4095		
 
-        TIM3_CCR1 = 10; 
-        TIM3_CCR2 = 10;
-	TIM3_CCR3 = 10;             	
+	mode=DIM_CWWW;
+	//mode=DIM_R;
+	//mode=DIM_Y;
+	
+	switch(mode) // TODO: use HW switch to change mode
+	{
+	case DIM_LUXE:
+	break;
+
+	case DIM_CWWW:
+        TIM3_CCR1 = 0; 
+        TIM3_CCR2 = 2048-adcresult/2;
+	TIM3_CCR3 = 0;             	
 	TIM14_CCR1 = adcresult/2;
+	// TODO: stabilize / only change brightness when adcresult changed significantly and interpret everything near 0 as 0.
+	break;
+
+	case DIM_CW:
+        TIM3_CCR1 = 0; 
+        TIM3_CCR2 = adcresult/2;
+	TIM3_CCR3 = 0;             	
+	TIM14_CCR1 = 0;
+	break;
+
+	case DIM_WW:
+	TIM3_CCR1 = 0; 
+        TIM3_CCR2 = 0;
+	TIM3_CCR3 = 0;             	
+	TIM14_CCR1 = adcresult/2;
+	break;
+
+	case DIM_R:
+	TIM3_CCR1 = 0; 
+        TIM3_CCR2 = 0;
+	TIM3_CCR3 = adcresult/2;    // TODO: Harware problem? Config issue? It does not wr0k.         	
+	TIM14_CCR1 = 0;	
+	break;
+
+	case DIM_Y:
+	TIM3_CCR1 = adcresult/2; 
+        TIM3_CCR2 = 0;
+	TIM3_CCR3 = 0;             	
+	TIM14_CCR1 = 0;
+	break;
+
+	default:
+	mode=DIM_R;
+	}
+
 	
 	debug = adcresult;
 
