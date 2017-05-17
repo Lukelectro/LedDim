@@ -26,7 +26,7 @@ void initClock()
       	// enable pheripheral clock to timer3 (BIT1) & TIM14 (BIT8).
         RCC_APB1ENR |= (BIT1 | BIT8 );
         
-        RCC_APB2ENR |= BIT9; // enable clock to adc
+        RCC_APB2ENR |= (BIT9 | BIT11); // enable clock to adc &TIM1
 }
 
 
@@ -98,7 +98,7 @@ int main() {
 
         // Set AF(AF1) en MODER to select PWM output on pins
 	GPIOA_AFRL |= (BIT24 |BIT28 | BIT18); ; // Bit27:24 for AFR6 / PA6, that should get set to AF1 (0001) for TIM3CH1, BIT28 is idem for PA7/TIM3ch2. And bit 18 for  AF4 on PA4: TIM14CH1 (PWM)
-	GPIOA_AFRH |= (BIT9); // TIM3CH3 voor PA10
+	GPIOA_AFRH |= (BIT9); // TIM1CH3 voor PA10
 	
         //set up timer 14 for PWM
         TIM14_PSC = 0; // prescaler. (8Mhz/psc+1=tim14clock)
@@ -110,9 +110,12 @@ int main() {
         TIM14_CR1 |= BIT0 ; // start after updating registers!
         
 	// Set up Timer 1 for PWM (on CH3)
+	TIM1_PSC = 0; // prescaler. (8Mhz/psc+1=tim14clock)	
 	TIM1_ARR = 2048;
 	TIM1_CCMR2 |= (BIT7|BIT6|BIT5|BIT3); // PWM on CH3, output enable, preload enable
 	TIM1_CCER |= (BIT8); // output enable
+	TIM1_BDTR |= BIT15; // Main Output Enable (TIM1 is an advanced control timer)	
+	TIM1_CR1 |= BIT7 ; // Control register. Set ARPE (bit7). And CEN I suppose (Counter enable, bit 0)	
 	TIM1_EGR |= BIT0 ; // set UG to generate update event so registers are read to the timer
         TIM1_CR1 |= BIT0 ; // start after updating registers!
 	
