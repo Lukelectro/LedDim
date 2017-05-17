@@ -90,8 +90,8 @@ int main() {
 
 
         TIM3_CCMR1 |= (BIT3 | BIT5 | BIT6 | BIT11 | BIT14 | BIT13) ;      // Set OC1PE (bit3), OC2PE (bit11) preload enable, PWM mode for ch2 (BIT 14,13), ch1 (Bit 6,5) 
-	TIM3_CCMR2 |= (BIT3|BIT5|BIT6);          			  //set OC3PE (Bit3), PWM mode for ch3 (Bit 6,5)
-	TIM3_CCER |= (BIT0 | BIT4 | BIT8 ) ; // CC1P to set polarity of output (0=active high), CC1E (bit 0) to enable output on ch1, bit4 for ch2, it8 voor ch3.
+	//TIM3_CCMR2 |= (BIT3|BIT5|BIT6);          			  //XXX set OC3PE (Bit3), PWM mode for ch3 (Bit 6,5) (TIMER3CH3 has no output on TSSOP20, use T1C3 instead)
+	TIM3_CCER |= (BIT0 | BIT4 ) ; // CC1P to set polarity of output (0=active high), CC1E (bit 0) to enable output on ch1, bit4 for ch2, XXX Bit8 voor ch3.
         TIM3_CR1 |= BIT7 ;        // Control register. Set ARPE (bit7). And CEN I suppose (Counter enable, bit 0)
         TIM3_EGR |= BIT0 ; // set UG to generate update event so registers are read to the timer
         TIM3_CR1 |= BIT0 ; // start after updating registers!
@@ -109,6 +109,14 @@ int main() {
         TIM14_EGR |= BIT0 ; // set UG to generate update event so registers are read to the timer
         TIM14_CR1 |= BIT0 ; // start after updating registers!
         
+	// Set up Timer 1 for PWM (on CH3)
+	TIM1_ARR = 2048;
+	TIM1_CCMR2 |= (BIT7|BIT6|BIT5|BIT3); // PWM on CH3, output enable, preload enable
+	TIM1_CCER |= (BIT8); // output enable
+	TIM1_EGR |= BIT0 ; // set UG to generate update event so registers are read to the timer
+        TIM1_CR1 |= BIT0 ; // start after updating registers!
+	
+
 
 
         // Wait for ADCAL to be zero again:
@@ -124,8 +132,8 @@ int main() {
  	static int i=0;
 		// PWM max = 2047, ADC max = 4095		
 
-	mode=DIM_CWWW;
-	//mode=DIM_R;
+	//mode=DIM_CWWW;
+	mode=DIM_R;
 	//mode=DIM_Y;
 	
 	switch(mode) // TODO: use HW switch to change mode
@@ -136,7 +144,7 @@ int main() {
 	case DIM_CWWW:
         TIM3_CCR1 = 0; 
         TIM3_CCR2 = 2048-adcresult/2;
-	TIM3_CCR3 = 0;             	
+	TIM1_CCR3 = 0;             	
 	TIM14_CCR1 = adcresult/2;
 	// TODO: stabilize / only change brightness when adcresult changed significantly and interpret everything near 0 as 0.
 	break;
@@ -144,28 +152,28 @@ int main() {
 	case DIM_CW:
         TIM3_CCR1 = 0; 
         TIM3_CCR2 = adcresult/2;
-	TIM3_CCR3 = 0;             	
+	TIM1_CCR3 = 0;             	
 	TIM14_CCR1 = 0;
 	break;
 
 	case DIM_WW:
 	TIM3_CCR1 = 0; 
         TIM3_CCR2 = 0;
-	TIM3_CCR3 = 0;             	
+	TIM1_CCR3 = 0;             	
 	TIM14_CCR1 = adcresult/2;
 	break;
 
 	case DIM_R:
 	TIM3_CCR1 = 0; 
         TIM3_CCR2 = 0;
-	TIM3_CCR3 = adcresult/2;    // TODO: Harware problem? Config issue? It does not wr0k.         	
+	TIM1_CCR3 = adcresult/2;             	
 	TIM14_CCR1 = 0;	
 	break;
 
 	case DIM_Y:
 	TIM3_CCR1 = adcresult/2; 
         TIM3_CCR2 = 0;
-	TIM3_CCR3 = 0;             	
+	TIM1_CCR3 = 0;             	
 	TIM14_CCR1 = 0;
 	break;
 
