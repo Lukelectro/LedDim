@@ -8,7 +8,9 @@ TODO: modify further from juggleball. Keep PWM/ADC stuff. PWM should be on 40Khz
 #include "stm32f030xx.h" // the modified Frank Duignan header file. (I started from his "Blinky" example). 
 #include "config.h"  // ?
 
-volatile int adcresult, debug; // can be read in debugger too.
+#define DIM_MAX 2047
+
+volatile int adcresult; // can be read in debugger too.
 int tick;
 
 void delay(int dly)
@@ -78,6 +80,7 @@ int main() {
 	//TODO: (Aanpassen naar ledstripdimmersituatie): Set unused pins to a defined state so floating inputs do not consume power
 	GPIOF_MODER |= BIT0|BIT1|BIT2|BIT3; // PF0 and PF1 to Analog Input
 	GPIOB_MODER |= BIT2|BIT3; //PB1 to AIN
+	GPIOA_PUPDR |= (BIT0); 	  //BIT0: PullUp on PA0 (Switch input)
 		
 	
 	//Before enabling ADC, let it calibrate itself by settin ADCAL (And waiting 'till it is cleared again before enabling ADC)
@@ -131,65 +134,107 @@ int main() {
 	while(1){	
 
 	enum mode{DIM_LUXE,DIM_CWWW,DIM_CW,DIM_WW,DIM_R,DIM_Y} mode;
+ 	static int i=0, cwdim,wwdim,rdim,ydim,prevpot;
 
- 	static int i=0;
-		// PWM max = 2047, ADC max = 4095		
+	
+	// NOTE: PWM max = 2047, ADC max = 4095		
 
 	//mode=DIM_CWWW;
-	mode=DIM_R;
+	//mode=DIM_R;
 	//mode=DIM_Y;
 	
 	switch(mode) // TODO: use HW switch to change mode
 	{
-	case DIM_LUXE:
+	case DIM_LUXE: // TODO: implement folowing curve.
+		rdim=0;
+		ydim=0;
+		cwdim=0;
+		wwdim=0;
+		if(adcresult<300){
+			rdim=adcresult;
+		}else
+		if(adcresult<600){
+			rdim=300;
+			ydim=adcresult-300;
+		}else	
+		if(adcresult<900){
+			rdim=300;
+			ydim=300;
+			wwdim=adcresult-600;
+		}else
+		if(adcresult<2048){
+			rdim=300;
+			ydim=300;
+			wwdim=adcresult;
+		}else{
+			rdim=300;
+			ydim=300;
+			wwdim=2047;
+			cwdim=adcresult-2047;		
+		}
 	break;
 
 	case DIM_CWWW:
-        TIM3_CCR1 = 0; 
-        TIM3_CCR2 = 2048-adcresult/2;
-	TIM1_CCR3 = 0;             	
-	TIM14_CCR1 = adcresult/2;
+        ydim = 0; 
+        cwdim = 2048-adcresult/2;
+	rdim = 0;             	
+	wwdim = adcresult/2;
 	// TODO: stabilize / only change brightness when adcresult changed significantly and interpret everything near 0 as 0.
 	break;
 
 	case DIM_CW:
-        TIM3_CCR1 = 0; 
-        TIM3_CCR2 = adcresult/2;
-	TIM1_CCR3 = 0;             	
-	TIM14_CCR1 = 0;
+        cwdim = adcresult/2;
+	wwdim= 0;
+	rdim = 0;             	
+	ydim = 0;
 	break;
 
 	case DIM_WW:
-	TIM3_CCR1 = 0; 
-        TIM3_CCR2 = 0;
-	TIM1_CCR3 = 0;             	
-	TIM14_CCR1 = adcresult/2;
+	ydim = 0; 
+        rdim = 0;
+	cwdim = 0;        
+	if( (adcresult>(prevpot+400)) || (adcresult< (prevpot-400)) ){ // only when changed, not with noise on pot or when longpress ww.
+	 	wwdim = adcresult/2;
+		prevpot=adcresult; // store previous potmeter position
+	}     	
 	break;
 
 	case DIM_R:
-	TIM3_CCR1 = 0; 
-        TIM3_CCR2 = 0;
-	TIM1_CCR3 = adcresult/2;             	
-	TIM14_CCR1 = 0;	
+	wwdim = 0; 
+        cwdim = 0;
+	rdim = adcresult/2;             	
+	ydim = 0;	
 	break;
 
 	case DIM_Y:
-	TIM3_CCR1 = adcresult/2; 
-        TIM3_CCR2 = 0;
-	TIM1_CCR3 = 0;             	
-	TIM14_CCR1 = 0;
+	ydim = adcresult/2; 
+        rdim = 0;
+	wwdim = 0;             	
+	cwdim = 0;
 	break;
 
-	default:
-	mode=DIM_R;
+	default: // wrap around
+	mode=DIM_LUXE;
 	}
 
-	
-	debug = adcresult;
+	while(! (GPIOA_IDR & (BIT0))){ // while switch is pressed
+		i++;	
+		delay(10);
+	}
 
-	if(i<2048){
-		i++;
-	}else i=0;
+	if(i>300 && i<60000){ // short press
+		mode++;
+	}else if(i>60000){ // long press
+		mode=DIM_WW;
+		wwdim=DIM_MAX;
+		prevpot=adcresult; 
+	}
+	i=0; // reset switch press count.
+
+	TIM3_CCR1 = ydim; 
+        TIM3_CCR2 = cwdim;
+	TIM1_CCR3 = rdim;             	
+	TIM14_CCR1 = wwdim;
 
 	ADC_CR |= (BIT2); // Set ADSTART to start (next) conversion	
 	}
@@ -199,15 +244,11 @@ int main() {
 
 
 void ADC_Handler(){
-	tick++; //XXX do I still need this?
-        
+	tick++; //XXX do I still need this?       
         if(ADC_ISR&(BIT2)) // Check EOC (Could check EOSEQ when the sequence is only 1 conversion long)
         {
                 adcresult=ADC_DR; // read adc result for debugger/global use. (Also clears flag)
         }
-        
-        debug = ADC_ISR;
-        
 }
 
 void EXTI_Handler(void){
