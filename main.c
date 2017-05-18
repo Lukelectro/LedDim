@@ -9,6 +9,7 @@ TODO: modify further from juggleball. Keep PWM/ADC stuff. PWM should be on 40Khz
 #include "config.h"  // ?
 
 #define DIM_MAX 2047
+#define ADC_MAX 4095
 
 volatile int adcresult; // can be read in debugger too.
 int tick;
@@ -22,7 +23,6 @@ void initClock()
 {
 // Led lamp will use standard 8Mhz internal clock, so not much config needed
 
-        // TODO:Set adc clock (Or leave it as is?)
       	ADC_CFGR2|=(BIT31); // Clock ADC with PCLOCK/4 =8Mhz/4=2Mhz
 
       	// enable pheripheral clock to timer3 (BIT1) & TIM14 (BIT8).
@@ -65,6 +65,32 @@ void setup_adc(){
         while (!(ADC_ISR&BIT0));// check ADCRDY (In ADC_ISR, bit0) to see if ADC is ready for starting a coversion
         
         ADC_CR |= (BIT2); // Set ADSTART to start conversion  
+}
+
+/* returns PWM value when given:
+//current potmeter position (curpos),
+*  Potmeter position at start of curve (Startpos)
+*  Potmeter pos at end of curve (endpos)
+* 
+* for upwards curves:
+*  max PWM value at end of curve (EndPWM)
+*  min PWM value at start of curve (StartPWM) 
+* 
+* * for downwards curves:
+*  max PWM value at start of curve (StartPWM)
+*  min PWM value at end of curve (EndPWM) 
+
+*/
+int LedDimCurveMaker(
+int curpos, int startpos, int endpos, int StartPWM, int EndPWM){
+	//assert(startpos<endpos);
+	
+	if (EndPWM>StartPWM){ // upward curve
+		 return StartPWM + (EndPWM-StartPWM)*(curpos - startpos)/(endpos-startpos);
+	 }
+	if (EndPWM<StartPWM){ //downward curve
+		 return EndPWM + StartPWM - (StartPWM)*(curpos - startpos)/(endpos-startpos); 
+	}
 }
 
 
@@ -143,34 +169,46 @@ int main() {
 	//mode=DIM_R;
 	//mode=DIM_Y;
 	
-	switch(mode) // TODO: use HW switch to change mode
+	switch(mode) 
 	{
 	case DIM_LUXE: // TODO: implement folowing curve.
 		rdim=0;
 		ydim=0;
 		cwdim=0;
 		wwdim=0;
-		if(adcresult<300){
-			rdim=adcresult;
+		// will be overwritten when needed, but default is 0.
+	
+		if(adcresult<(5*ADC_MAX/100)){ // up to 5% dim (Potentiometer position)
+			//rdim=adcresult/2; 		// only a faint red glow
+			
+			rdim=LedDimCurveMaker(adcresult,0,(5*ADC_MAX/100),0,(10*DIM_MAX/100)); 
+			// dim red from 0% to 10%PWM on 0-5% potmeter position (potpos)
 		}else
-		if(adcresult<600){
-			rdim=300;
-			ydim=adcresult-300;
+		if(adcresult<(4096/100)*15){ // 5 up to 15% potpos
+			rdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(15*ADC_MAX/100),(10*DIM_MAX/100),(1*DIM_MAX/100)); // red from 10% to 1%PWM on 5-15% potpos
+			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(10*DIM_MAX/100)); // Amber from 0-10%PWM on 5-20%potpos
+			
 		}else	
-		if(adcresult<900){
-			rdim=300;
-			ydim=300;
-			wwdim=adcresult-600;
+		if(adcresult<(4096/100)*20){ //15 up to 20% potpos
+			rdim=1*DIM_MAX/100; // keep red at 1%
+			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(10*DIM_MAX/100)); // Amber from 0-10%PWM on 5-20%potpos
+			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
+		}else 
+		if(adcresult<(4096/100)*45){ // 20 -25% potpos
+			rdim=1*DIM_MAX/100; // keep red at 1%
+			ydim=10*DIM_MAX/100; // keep amber at 10%
+			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
 		}else
-		if(adcresult<2048){
-			rdim=300;
-			ydim=300;
-			wwdim=adcresult;
-		}else{
-			rdim=300;
-			ydim=300;
-			wwdim=2047;
-			cwdim=adcresult-2047;		
+		if(adcresult<(4096/100)*50){ //45-50 potpos%
+			// No more red or amber
+			wwdim=DIM_MAX; // Warm white FULL ON
+		}else
+		if(adcresult<(4096/100)*95){ // 50-95% potpos
+			wwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),(99*DIM_MAX/100),0); // Warm white from 99-0% on 50-95%potpos
+			cwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),0,(99*DIM_MAX/100)); // cold white from 0-99% on 50-95%potpos
+		}else{ 						// 95-100% potpos
+			// no more Warm white, cold white FULL ON
+			cwdim=DIM_MAX;		
 		}
 	break;
 
@@ -252,7 +290,7 @@ void ADC_Handler(){
 }
 
 void EXTI_Handler(void){
-// empty for now, could do wake up stuff here later TODO
+// empty for now, could do wake up stuff here later TODO (Or remove)
 EXTI_PR |=(BIT5); // clear the flag. 
 }
 
