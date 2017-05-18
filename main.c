@@ -11,8 +11,7 @@ TODO: modify further from juggleball. Keep PWM/ADC stuff. PWM should be on 40Khz
 #define DIM_MAX 2047
 #define ADC_MAX 4095
 
-volatile int adcresult; // can be read in debugger too.
-int tick;
+volatile int adcresult, adcraw; // can be read in debugger too.
 
 void delay(int dly)
 {
@@ -186,24 +185,27 @@ int main() {
 		}else
 		if(adcresult<(4096/100)*15){ // 5 up to 15% potpos
 			rdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(15*ADC_MAX/100),(10*DIM_MAX/100),(1*DIM_MAX/100)); // red from 10% to 1%PWM on 5-15% potpos
-			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(10*DIM_MAX/100)); // Amber from 0-10%PWM on 5-20%potpos
+			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(20*DIM_MAX/100)); // Amber from 0-20%PWM on 5-20%potpos
 			
 		}else	
 		if(adcresult<(4096/100)*20){ //15 up to 20% potpos
 			rdim=1*DIM_MAX/100; // keep red at 1%
-			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(10*DIM_MAX/100)); // Amber from 0-10%PWM on 5-20%potpos
+			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(20*DIM_MAX/100)); // Amber from 0-20%PWM on 5-20%potpos
 			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
 		}else 
 		if(adcresult<(4096/100)*45){ // 20 -25% potpos
 			rdim=1*DIM_MAX/100; // keep red at 1%
-			ydim=10*DIM_MAX/100; // keep amber at 10%
+			ydim=20*DIM_MAX/100; // keep amber at 20%
 			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
 		}else
 		if(adcresult<(4096/100)*50){ //45-50 potpos%
-			// No more red or amber
+			rdim=1*DIM_MAX/100; // keep red at 1%
+			ydim=20*DIM_MAX/100; // keep amber at 20%
 			wwdim=DIM_MAX; // Warm white FULL ON
 		}else
 		if(adcresult<(4096/100)*95){ // 50-95% potpos
+			rdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(55*ADC_MAX/100),(1*DIM_MAX/100),0); // red to zero at 55% (And then below 0, but it gets clamped by the underflow protection, so no problem)
+			ydim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(60*ADC_MAX/100),(20*DIM_MAX/100),0); // amber to zero at 60% (Same underflow "problem" that isn't actualy a problem).
 			wwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),(99*DIM_MAX/100),0); // Warm white from 99-0% on 50-95%potpos
 			cwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),0,(99*DIM_MAX/100)); // cold white from 0-99% on 50-95%potpos
 		}else{ 						// 95-100% potpos
@@ -214,14 +216,13 @@ int main() {
 
 	case DIM_CWWW:
         ydim = 0; 
-        cwdim = 2048-adcresult/2;
-	rdim = 0;             	
-	wwdim = adcresult/2;
-	// TODO: stabilize / only change brightness when adcresult changed significantly and interpret everything near 0 as 0.
+        wwdim = DIM_MAX-adcresult/(ADC_MAX/DIM_MAX);
+		rdim = 0;             	
+		cwdim = adcresult/(ADC_MAX/DIM_MAX);
 	break;
 
 	case DIM_CW:
-        cwdim = adcresult/2;
+        cwdim = adcresult/(ADC_MAX/DIM_MAX);
 	wwdim= 0;
 	rdim = 0;             	
 	ydim = 0;
@@ -231,8 +232,8 @@ int main() {
 	ydim = 0; 
         rdim = 0;
 	cwdim = 0;        
-	if( (adcresult>(prevpot+400)) || (adcresult< (prevpot-400)) ){ // only when changed, not with noise on pot or when longpress ww.
-	 	wwdim = adcresult/2;
+	if( (adcresult>(prevpot+100)) || (adcresult< (prevpot-100)) ){ // only when changed, not with noise on pot (Add 10-100nF) or when longpress ww.
+	 	wwdim=adcresult/(ADC_MAX/DIM_MAX);
 		prevpot=adcresult; // store previous potmeter position
 	}     	
 	break;
@@ -240,12 +241,12 @@ int main() {
 	case DIM_R:
 	wwdim = 0; 
         cwdim = 0;
-	rdim = adcresult/2;             	
+	rdim = adcresult/(ADC_MAX/DIM_MAX);             	
 	ydim = 0;	
 	break;
 
 	case DIM_Y:
-	ydim = adcresult/2; 
+	ydim = adcresult/(ADC_MAX/DIM_MAX);
         rdim = 0;
 	wwdim = 0;             	
 	cwdim = 0;
@@ -294,10 +295,11 @@ int main() {
 
 
 void ADC_Handler(){
-	tick++; //XXX do I still need this?       
+	//tick++;       
         if(ADC_ISR&(BIT2)) // Check EOC (Could check EOSEQ when the sequence is only 1 conversion long)
         {
-                adcresult=ADC_DR; // read adc result for debugger/global use. (Also clears flag)
+                adcraw=ADC_DR; // read adc result for debugger/global use. (Also clears flag)
+                adcresult=(3*adcresult+adcraw)/4; // simple filter
         }
 }
 
