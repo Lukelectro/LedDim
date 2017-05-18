@@ -269,8 +269,20 @@ int main() {
 	}
 	i=0; // reset switch press count.
 
+	//prevent underflow (due to? Rounding error?)
+	if(ydim<0) ydim=0;
+	if(rdim<0) rdim=0;
+	if(wwdim<0) wwdim=0;
+	if(cwdim<0) cwdim=0;
+	
+	// and overflow
+	if(ydim>DIM_MAX) ydim=DIM_MAX;
+	if(rdim>DIM_MAX) rdim=DIM_MAX;
+	if(wwdim>DIM_MAX) wwdim=DIM_MAX;
+	if(cwdim>DIM_MAX) cwdim=DIM_MAX;
+
 	TIM3_CCR1 = ydim; 
-        TIM3_CCR2 = cwdim;
+    TIM3_CCR2 = cwdim;
 	TIM1_CCR3 = rdim;             	
 	TIM14_CCR1 = wwdim;
 
