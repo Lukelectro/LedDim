@@ -11,6 +11,9 @@ TODO: modify further from juggleball. Keep PWM/ADC stuff. PWM should be on 40Khz
 #define DIM_MAX 2047
 #define ADC_MAX 4095
 
+#define FALSE 0;
+#define TRUE 1;
+
 volatile int adcresult, adcraw; // can be read in debugger too.
 
 void delay(int dly)
@@ -94,6 +97,9 @@ int curpos, int startpos, int endpos, int StartPWM, int EndPWM){
 
 
 int main() {
+	
+	bool dimmen=FALSE;
+	 	
 	initClock();
 
 	// enable clock to Porta
@@ -230,12 +236,14 @@ int main() {
 
 	case DIM_WW:
 	ydim = 0; 
-        rdim = 0;
+    rdim = 0;
 	cwdim = 0;        
-	if( (adcresult>(prevpot+100)) || (adcresult< (prevpot-100)) ){ // only when changed, not with noise on pot (Add 10-100nF) or when longpress ww.
-	 	wwdim=adcresult/(ADC_MAX/DIM_MAX);
+	if( (adcresult>(prevpot+500)) || (adcresult< (prevpot-500)) ){ // only when changed, not with noise on pot (Add 10-100nF) or when longpress ww.
+	 	dimmen=TRUE;
 		prevpot=adcresult; // store previous potmeter position
 	}     	
+	if(dimmen) wwdim=adcresult/(ADC_MAX/DIM_MAX);
+	
 	break;
 
 	case DIM_R:
@@ -267,6 +275,7 @@ int main() {
 		mode=DIM_WW;
 		wwdim=DIM_MAX;
 		prevpot=adcresult; 
+		dimmen=FALSE;
 	}
 	i=0; // reset switch press count.
 
