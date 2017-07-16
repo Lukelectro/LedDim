@@ -186,34 +186,36 @@ int main() {
 		if(adcresult<(5*ADC_MAX/100)){ // up to 5% dim (Potentiometer position)
 			//rdim=adcresult/2; 		// only a faint red glow
 			
-			rdim=LedDimCurveMaker(adcresult,0,(5*ADC_MAX/100),0,(10*DIM_MAX/100)); 
-			// dim red from 0% to 10%PWM on 0-5% potmeter position (potpos)
+			rdim=LedDimCurveMaker(adcresult,0,(5*ADC_MAX/100),0,(5*DIM_MAX/100)); 
+			// dim red from 0% to 5%PWM on 0-5% potmeter position (potpos)
+			ydim=LedDimCurveMaker(adcresult,0,(15*ADC_MAX/100),0,(5*DIM_MAX/100));
+			//dim yellow 0-5% PWM on 0-15% pot pos
 		}else
 		if(adcresult<(4096/100)*15){ // 5 up to 15% potpos
-			rdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(15*ADC_MAX/100),(10*DIM_MAX/100),(1*DIM_MAX/100)); // red from 10% to 1%PWM on 5-15% potpos
-			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(20*DIM_MAX/100)); // Amber from 0-20%PWM on 5-20%potpos
-			
+			rdim=5*DIM_MAX/100; // keep red at 5%			
+			ydim=LedDimCurveMaker(adcresult,0,(15*ADC_MAX/100),0,(5*DIM_MAX/100)); // Amber from 0-5%PWM on 0-15%potpos
+			wwdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 5-45%potpos			
 		}else	
 		if(adcresult<(4096/100)*20){ //15 up to 20% potpos
-			rdim=1*DIM_MAX/100; // keep red at 1%
-			ydim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(20*ADC_MAX/100),0,(20*DIM_MAX/100)); // Amber from 0-20%PWM on 5-20%potpos
-			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
+			rdim=5*DIM_MAX/100; // keep red at 5%
+			ydim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(20*ADC_MAX/100),0,(20*DIM_MAX/100)); // Amber from 5-20%PWM on 15-20%potpos
+			wwdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 5-45%potpos
 		}else 
 		if(adcresult<(4096/100)*45){ // 20 -25% potpos
-			rdim=1*DIM_MAX/100; // keep red at 1%
+			rdim=5*DIM_MAX/100; // keep red at 5%
 			ydim=20*DIM_MAX/100; // keep amber at 20%
-			wwdim=LedDimCurveMaker(adcresult,(15*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 15-45%potpos
+			wwdim=LedDimCurveMaker(adcresult,(5*ADC_MAX/100),(45*ADC_MAX/100),0,(99*DIM_MAX/100)); // Warm white from 0-99% on 5-45%potpos
 		}else
 		if(adcresult<(4096/100)*50){ //45-50 potpos%
-			rdim=1*DIM_MAX/100; // keep red at 1%
+			rdim=5*DIM_MAX/100; // keep red at 5%
 			ydim=20*DIM_MAX/100; // keep amber at 20%
 			wwdim=DIM_MAX; // Warm white FULL ON
 		}else
-		if(adcresult<(4096/100)*95){ // 50-95% potpos
-			rdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(55*ADC_MAX/100),(1*DIM_MAX/100),0); // red to zero at 55% (And then below 0, but it gets clamped by the underflow protection, so no problem)
+		if(adcresult<(4096/100)*98){ // 50-98% potpos
+			rdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(55*ADC_MAX/100),(5*DIM_MAX/100),0); // red to zero at 55% (And then below 0, but it gets clamped by the underflow protection, so no problem)
 			ydim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(60*ADC_MAX/100),(20*DIM_MAX/100),0); // amber to zero at 60% (Same underflow "problem" that isn't actualy a problem).
-			wwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),(99*DIM_MAX/100),0); // Warm white from 99-0% on 50-95%potpos
-			cwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(95*ADC_MAX/100),0,(99*DIM_MAX/100)); // cold white from 0-99% on 50-95%potpos
+			wwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(98*ADC_MAX/100),(99*DIM_MAX/100),0); // Warm white from 99-0% on 50-98%potpos
+			cwdim=LedDimCurveMaker(adcresult,(50*ADC_MAX/100),(98*ADC_MAX/100),0,(99*DIM_MAX/100)); // cold white from 0-99% on 50-98%potpos
 		}else{ 						// 95-100% potpos
 			// no more Warm white, cold white FULL ON
 			cwdim=DIM_MAX;		
