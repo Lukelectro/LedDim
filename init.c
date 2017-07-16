@@ -37,7 +37,7 @@ const void * Vectors[] __attribute__((section(".vectors"))) ={
 	Default_Handler, 	/* 4: RCC */
 	Default_Handler, 	/* 5: EXTI0_1 */
 	Default_Handler, 	/* 6: EXTI2_3 */
-	EXTI_Handler	, 	/* 7: EXTI4_15 */
+	Default_Handler	, 	/* 7: EXTI4_15 */
 	Default_Handler, 	/* 8: Reserved */
 	Default_Handler, 	/* 9: DMA_CH1 */
 	Default_Handler, 	/* 10: DMA_CH2_3 */

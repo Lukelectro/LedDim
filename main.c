@@ -1,8 +1,10 @@
 /*
-NOTES, IDEAS, CURRENT STATE, TITLE, LICENSE, ETC. SHOULD GO HERE.
-
-TODO: modify further from juggleball. Keep PWM/ADC stuff. PWM should be on 40Khz-ish (Above audio, far below radio), on TIM14CH1 and TIM3CH1,2,3. ADC on PA5, switch on PA0.
-
+* NOTES, IDEAS, CURRENT STATE, TITLE, LICENSE, ETC. SHOULD GO HERE.
+* 
+* TODO: PWM should be 40Khz-ish (Above audio, far below radio), but it's not worth increasing timer frequency or lowering resolution.
+* 
+* PWM on TIM14CH1 (Warm white) and TIM3CH1,2 and TIM1CH3 (resp. Yellow, Cold White and Red) 
+*  (Potmeter) ADC on PA5, (mode)switch on PA0.
 */
 #include <stdbool.h>
 #include "stm32f030xx.h" // the modified Frank Duignan header file. (I started from his "Blinky" example). 
@@ -108,10 +110,10 @@ int main() {
 
 	GPIOA_MODER |= (BIT9 | BIT11|BIT10 | BIT13 | BIT15 | BIT21 ) ; // PA0 INput for switch (No config needed), PA4 AF (PWM WW), PA5 Ain (Potmeter), PA6,7,10 AF (PWM Y,CW,R)
 	
-	//TODO: (Aanpassen naar ledstripdimmersituatie): Set unused pins to a defined state so floating inputs do not consume power
+	// Set unused pins to a defined state so floating inputs do not consume power, or to analog input
 	GPIOF_MODER |= BIT0|BIT1|BIT2|BIT3; // PF0 and PF1 to Analog Input
 	GPIOB_MODER |= BIT2|BIT3; //PB1 to AIN
-	GPIOA_PUPDR |= (BIT0); 	  //BIT0: PullUp on PA0 (Switch input)
+	GPIOA_PUPDR |= BIT0|BIT3|BIT5|BIT7|BIT19; 	  //BIT0: PullUp on PA0 (Switch input) , BIT3,5,7,19: Pulldowns on PA 1,2,3,9 (unused)
 		
 	
 	//Before enabling ADC, let it calibrate itself by settin ADCAL (And waiting 'till it is cleared again before enabling ADC)
@@ -119,7 +121,7 @@ int main() {
 
 	//set up timer 3 for PWM
 	TIM3_PSC = 0; // prescaler. (8Mhz/psc+1=tim3clock) = 8Mhz
-        TIM3_ARR = 2048;  // 16 bit timer, AutoReloadRegister (frequency) (8E6/((TIM3_PSC+1)*TIM3_ARR), about 4Khz, should be OK with FETs/EMC but may be audible...
+        TIM3_ARR = 2048;  // 16 bit timer, AutoReloadRegister (frequency) (8E6/((TIM3_PSC+1)*TIM3_ARR), about 4Khz, should be OK with FETs but may be audible...
         //TIM3_CCR1 = 2048; // Compare register 1, dutycycle on output 1 (It has 4)
 
 
@@ -176,7 +178,7 @@ int main() {
 	
 	switch(mode) 
 	{
-	case DIM_LUXE: // TODO: implement folowing curve.
+	case DIM_LUXE:
 		rdim=0;
 		ydim=0;
 		cwdim=0;
@@ -312,8 +314,5 @@ void ADC_Handler(){
         }
 }
 
-void EXTI_Handler(void){
-// empty for now, could do wake up stuff here later TODO (Or remove)
-EXTI_PR |=(BIT5); // clear the flag. 
-}
+
 
