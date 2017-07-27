@@ -120,9 +120,10 @@ int main() {
         ADC_CR |= (BIT31); // set adcal	
 
 	//set up timer 3 for PWM
-	TIM3_PSC = 0; // prescaler. (8Mhz/psc+1=tim3clock) = 8Mhz
-        TIM3_ARR = 2048;  // 16 bit timer, AutoReloadRegister (frequency) (8E6/((TIM3_PSC+1)*TIM3_ARR), about 4Khz, should be OK with FETs but may be audible...
-        //TIM3_CCR1 = 2048; // Compare register 1, dutycycle on output 1 (It has 4)
+	TIM3_PSC = 9; // prescaler. (8Mhz/psc+1=tim3clock)
+        TIM3_ARR = 2048;  // 16 bit timer, AutoReloadRegister (frequency) (8Mhz/((TIM3_PSC+1)*TIM3_ARR) (Met PSC 9 and ARR 2048, about 391 Hz (390.625)
+
+// NOTE: WHEN YOU CHANGE PWM PRESCALER (to reduce audible noise), DO NOT CHANGE ARR, and DON'T FORGET to change it on ALL 3 TIMERS
 
 
         TIM3_CCMR1 |= (BIT3 | BIT5 | BIT6 | BIT11 | BIT14 | BIT13) ;      // Set OC1PE (bit3), OC2PE (bit11) preload enable, PWM mode for ch2 (BIT 14,13), ch1 (Bit 6,5) 
@@ -137,7 +138,7 @@ int main() {
 	GPIOA_AFRH |= (BIT9); // TIM1CH3 voor PA10
 	
         //set up timer 14 for PWM
-        TIM14_PSC = 0; // prescaler. (8Mhz/psc+1=tim14clock)
+        TIM14_PSC = 9; // prescaler. (8Mhz/psc+1=tim14clock)
         TIM14_ARR = 2048;  // 16 bit timer, AutoReloadRegister (frequency) (8E6/((TIM14_PSC+1)*TIM14_ARR)
         TIM14_CCMR1 |= (BIT3 | BIT5 | BIT6 ) ;      // PWM mode (per output bit 4:6). Set OC1PE (bit5) preload enable. 
         TIM14_CCER |= (BIT0) ; //  CC1E (bit 0) to enable output on ch1.
@@ -146,7 +147,7 @@ int main() {
         TIM14_CR1 |= BIT0 ; // start after updating registers!
         
 	// Set up Timer 1 for PWM (on CH3)
-	TIM1_PSC = 0; // prescaler. (8Mhz/psc+1=tim14clock)	
+	TIM1_PSC = 9; // prescaler. (8Mhz/psc+1=tim14clock)	
 	TIM1_ARR = 2048;
 	TIM1_CCMR2 |= (BIT7|BIT6|BIT5|BIT3); // PWM on CH3, output enable, preload enable
 	TIM1_CCER |= (BIT8); // output enable
